@@ -94,8 +94,8 @@ def thread_target(weights,
                   save_conf,
                   hide_labels,
                   hide_conf,
+                  visualize,
                   lock
-                  
                   ):
     # Run inference
     
@@ -263,25 +263,20 @@ def run(
     else:
         dataset = LoadImages(source, img_size=imgsz, stride=stride, auto=pt, vid_stride=vid_stride)
 
-    # Run inference
-    # model.warmup(imgsz=(1 if pt or model.triton else bs, 3, *imgsz))  # warmup
     
     # Set of synchronous variables
     # seen
     # windows
     
-    # Set of variables to copy
-    # model
-    
-    
     dt = 0, [], (Profile(), Profile(), Profile())
     lock = Lock()
     
+    # Run inference
     for dataset_iter in dataset:        
         thread = thread_target(weights, device, dnn, data, half, bs, imgsz, dataset, dataset_iter, save_dir,
                       augment, conf_thres, iou_thres, classes, agnostic_nms,
                       max_det, webcam, line_thickness, save_crop, save_txt, view_img, save_img, 
-                      save_conf, hide_labels, hide_conf, lock)
+                      save_conf, hide_labels, hide_conf, visualize, lock)
         thread.start()
     threaded.ThreadPooled.shutdown()
         
