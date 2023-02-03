@@ -59,7 +59,7 @@ visited = 0
 windows = []
 
 def increment_visit(lock):
-    LOGGER.info("accessing increment_seen")
+    LOGGER.info("accessing increment_visit")
     if(lock.acquire()):
         seen += 1
     if(lock.locked()):
@@ -213,6 +213,7 @@ def thread_target(i, weights,
                     vid_writer[i] = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
                 vid_writer[i].write(im0)
 
+    increment_visit(lock)
     # Print time (inference-only)
     LOGGER.info(f"{s}{'' if len(det) else '(no detections), '}{dt[1].dt * 1E3:.1f}ms")
 
@@ -308,8 +309,6 @@ def run(
             strip_optimizer(weights[0])  # update model (to fix SourceChangeWarning)
     else:
         LOGGER.info(f"Not all threads are done!")
-
-
 
 
 def parse_opt():
