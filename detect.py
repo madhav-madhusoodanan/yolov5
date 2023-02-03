@@ -86,7 +86,6 @@ def thread_target(i, weights,
     
     # Set of variables to copy
     # model
-    LOGGER.info(f'Thread %d has started', i)
     
     path, im, im0s, vid_cap, s = dataset_iter
     model = DetectMultiBackend(weights, device=device, dnn=dnn, data=data, fp16=half)
@@ -106,8 +105,6 @@ def thread_target(i, weights,
     with dt[1]:
         visualize = increment_path(save_dir / Path(path).stem, mkdir=True) if visualize else False
         pred = model(im, augment=augment, visualize=visualize)
-        
-    LOGGER.info(f'Test here: %d', i)
 
     # NMS
     with dt[2]:
@@ -259,11 +256,10 @@ def run(
     
     # Run inference
     for i, dataset_iter in enumerate(dataset):
-        a = executor.submit(thread_target, i, weights, device, dnn, data, half, bs, imgsz, dataset, dataset_iter, save_dir,
+        executor.submit(thread_target, i, weights, device, dnn, data, half, bs, imgsz, dataset, dataset_iter, save_dir,
                     augment, conf_thres, iou_thres, classes, agnostic_nms,
                     max_det, webcam, line_thickness, save_crop, save_txt, view_img, save_img, 
-                    save_conf, hide_labels, hide_conf, visualize, windows)  
-        LOGGER.info(a.result()) 
+                    save_conf, hide_labels, hide_conf, visualize, windows)   
     
     executor.shutdown(wait=True)
     
