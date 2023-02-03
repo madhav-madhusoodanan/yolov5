@@ -62,7 +62,7 @@ def increment_visit(lock):
     global visited
     LOGGER.info("accessing increment_visit")
     if(lock.acquire()):
-        seen += 1
+        visited += 1
     if(lock.locked()):
         lock.release()
         
