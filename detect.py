@@ -32,7 +32,7 @@ import argparse
 import os
 import platform
 import sys
-import threaded
+import concurrent.futures
 from pathlib import Path
 from copy import deepcopy
 from threading import Lock
@@ -52,11 +52,21 @@ from utils.general import (LOGGER, Profile, check_file, check_img_size, check_im
 from utils.plots import Annotator, colors, save_one_box
 from utils.torch_utils import select_device, smart_inference_mode
 
-threaded.ThreadPooled.configure(max_workers=25)
+
+executor = concurrent.futures.ThreadPoolExecutor(max_workers=25)
 seen = 0
+visited = 0
 windows = []
 
+def increment_visit(lock):
+    LOGGER.info("accessing increment_seen")
+    if(lock.acquire()):
+        seen += 1
+    if(lock.locked()):
+        lock.release()
+        
 def increment_seen(lock):
+    LOGGER.info("accessing increment_seen")
     if(lock.acquire()):
         seen += 1
     if(lock.locked()):
@@ -66,11 +76,9 @@ def add_window(window, lock):
     if(lock.acquire()):
         windows.append(window)
     if(lock.locked()):
-        lock.release()
+        lock.release()    
     
-    
-@threaded.ThreadPooled
-def thread_target(weights,
+def thread_target(i, weights,
                   device,
                   dnn,
                   data,
@@ -104,6 +112,7 @@ def thread_target(weights,
     
     # Set of variables to copy
     # model
+    LOGGER.info(f'Thread %d has started', i)
     
     path, im, im0s, vid_cap, s = dataset_iter
     model = DetectMultiBackend(weights, device=device, dnn=dnn, data=data, fp16=half)
@@ -111,6 +120,8 @@ def thread_target(weights,
     model.warmup(imgsz=(1 if pt or model.triton else bs, 3, *imgsz))  # warmup
     dt = (Profile(), Profile(), Profile())
     vid_path, vid_writer = [None] * bs, [None] * bs
+    
+    
     
     with dt[0]:
         im = torch.from_numpy(im).to(model.device)
@@ -123,6 +134,8 @@ def thread_target(weights,
     with dt[1]:
         visualize = increment_path(save_dir / Path(path).stem, mkdir=True) if visualize else False
         pred = model(im, augment=augment, visualize=visualize)
+        
+    LOGGER.info(f'Test here: %d', i)
 
     # NMS
     with dt[2]:
@@ -233,6 +246,7 @@ def run(
         dnn=False,  # use OpenCV DNN for ONNX inference
         vid_stride=1,  # video frame-rate stride
 ):
+
     source = str(source)
     save_img = not nosave and not source.endswith('.txt')  # save inference images
     is_file = Path(source).suffix[1:] in (IMG_FORMATS + VID_FORMATS)
@@ -268,27 +282,34 @@ def run(
     # seen
     # windows
     
-    dt = 0, [], (Profile(), Profile(), Profile())
+    dt = (Profile(), Profile(), Profile())
     lock = Lock()
     
     # Run inference
-    for dataset_iter in dataset:        
-        thread = thread_target(weights, device, dnn, data, half, bs, imgsz, dataset, dataset_iter, save_dir,
-                      augment, conf_thres, iou_thres, classes, agnostic_nms,
-                      max_det, webcam, line_thickness, save_crop, save_txt, view_img, save_img, 
-                      save_conf, hide_labels, hide_conf, visualize, lock)
-        thread.start()
-    threaded.ThreadPooled.shutdown()
-        
+    for i, dataset_iter in enumerate(dataset):
+        a = executor.submit(thread_target, i, weights, device, dnn, data, half, bs, imgsz, dataset, dataset_iter, save_dir,
+                    augment, conf_thres, iou_thres, classes, agnostic_nms,
+                    max_det, webcam, line_thickness, save_crop, save_txt, view_img, save_img, 
+                    save_conf, hide_labels, hide_conf, visualize, lock)  
+        LOGGER.info(a.result()) 
+    
+    while (visited != len(dataset)):
+        executor.shutdown(wait=True)
+    
 
-    # Print results
-    t = tuple(x.t / seen * 1E3 for x in dt)  # speeds per image
-    LOGGER.info(f'Speed: %.1fms pre-process, %.1fms inference, %.1fms NMS per image at shape {(1, 3, *imgsz)}' % t)
-    if save_txt or save_img:
-        s = f"\n{len(list(save_dir.glob('labels/*.txt')))} labels saved to {save_dir / 'labels'}" if save_txt else ''
-        LOGGER.info(f"Results saved to {colorstr('bold', save_dir)}{s}")
-    if update:
-        strip_optimizer(weights[0])  # update model (to fix SourceChangeWarning)
+        # Print results
+    if(visited == len(dataset)):
+        t = tuple(x.t / seen * 1E3 for x in dt)  # speeds per image
+        LOGGER.info(f'Speed: %.1fms pre-process, %.1fms inference, %.1fms NMS per image at shape {(1, 3, *imgsz)}' % t)
+        if save_txt or save_img:
+            s = f"\n{len(list(save_dir.glob('labels/*.txt')))} labels saved to {save_dir / 'labels'}" if save_txt else ''
+            LOGGER.info(f"Results saved to {colorstr('bold', save_dir)}{s}")
+        if update:
+            strip_optimizer(weights[0])  # update model (to fix SourceChangeWarning)
+    else:
+        LOGGER.info(f"Not all threads are done!")
+
+
 
 
 def parse_opt():
