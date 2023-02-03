@@ -54,25 +54,9 @@ from utils.torch_utils import select_device, smart_inference_mode
 
 
 executor = concurrent.futures.ThreadPoolExecutor(max_workers=25)
-seen = 0
-visited = 0
 windows = []
 
-def increment_visit(lock):
-    global visited
-    LOGGER.info("accessing increment_visit")
-    if(lock.acquire()):
-        visited += 1
-    if(lock.locked()):
-        lock.release()
-        
-def increment_seen(lock):
-    global seen
-    LOGGER.info("accessing increment_seen")
-    if(lock.acquire()):
-        seen += 1
-    if(lock.locked()):
-        lock.release()
+    
         
 def add_window(window, lock):
     if(lock.acquire()):
@@ -148,7 +132,6 @@ def thread_target(i, weights,
 
     # Process predictions
     for i, det in enumerate(pred):  # per image
-        increment_seen(lock)
         if webcam:  # batch_size >= 1
             p, im0, frame = path[i], im0s[i].copy(), dataset.count
             s += f'{i}: '
@@ -215,7 +198,6 @@ def thread_target(i, weights,
                     vid_writer[i] = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
                 vid_writer[i].write(im0)
 
-    increment_visit(lock)
     # Print time (inference-only)
     LOGGER.info(f"{s}{'' if len(det) else '(no detections), '}{dt[1].dt * 1E3:.1f}ms")
 
@@ -296,21 +278,16 @@ def run(
                     save_conf, hide_labels, hide_conf, visualize, lock)  
         LOGGER.info(a.result()) 
     
-    while (visited != len(dataset)):
-        executor.shutdown(wait=True)
+    executor.shutdown(wait=True)
     
 
-        # Print results
-    if(visited == len(dataset)):
-        t = tuple(x.t / seen * 1E3 for x in dt)  # speeds per image
-        LOGGER.info(f'Speed: %.1fms pre-process, %.1fms inference, %.1fms NMS per image at shape {(1, 3, *imgsz)}' % t)
-        if save_txt or save_img:
-            s = f"\n{len(list(save_dir.glob('labels/*.txt')))} labels saved to {save_dir / 'labels'}" if save_txt else ''
-            LOGGER.info(f"Results saved to {colorstr('bold', save_dir)}{s}")
-        if update:
-            strip_optimizer(weights[0])  # update model (to fix SourceChangeWarning)
-    else:
-        LOGGER.info(f"Not all threads are done!")
+    # t = tuple(x.t / seen * 1E3 for x in dt)  # speeds per image
+    # LOGGER.info(f'Speed: %.1fms pre-process, %.1fms inference, %.1fms NMS per image at shape {(1, 3, *imgsz)}' % t)
+    if save_txt or save_img:
+        s = f"\n{len(list(save_dir.glob('labels/*.txt')))} labels saved to {save_dir / 'labels'}" if save_txt else ''
+        LOGGER.info(f"Results saved to {colorstr('bold', save_dir)}{s}")
+    if update:
+        strip_optimizer(weights[0])  # update model (to fix SourceChangeWarning)
 
 
 def parse_opt():
