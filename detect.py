@@ -59,6 +59,7 @@ visited = 0
 windows = []
 
 def increment_visit(lock):
+    global visited
     LOGGER.info("accessing increment_visit")
     if(lock.acquire()):
         seen += 1
@@ -66,6 +67,7 @@ def increment_visit(lock):
         lock.release()
         
 def increment_seen(lock):
+    global seen
     LOGGER.info("accessing increment_seen")
     if(lock.acquire()):
         seen += 1
