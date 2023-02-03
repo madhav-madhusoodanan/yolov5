@@ -35,7 +35,6 @@ import sys
 import concurrent.futures
 from pathlib import Path
 from copy import deepcopy
-from threading import Lock
 
 import torch
 
@@ -52,17 +51,6 @@ from utils.general import (LOGGER, Profile, check_file, check_img_size, check_im
 from utils.plots import Annotator, colors, save_one_box
 from utils.torch_utils import select_device, smart_inference_mode
 
-
-executor = concurrent.futures.ThreadPoolExecutor(max_workers=25)
-windows = []
-
-    
-        
-def add_window(window, lock):
-    if(lock.acquire()):
-        windows.append(window)
-    if(lock.locked()):
-        lock.release()    
     
 def thread_target(i, weights,
                   device,
@@ -89,7 +77,7 @@ def thread_target(i, weights,
                   hide_labels,
                   hide_conf,
                   visualize,
-                  lock
+                  windows
                   ):
     # Run inference
     
@@ -105,9 +93,7 @@ def thread_target(i, weights,
     names, pt = model.names, model.pt
     model.warmup(imgsz=(1 if pt or model.triton else bs, 3, *imgsz))  # warmup
     dt = (Profile(), Profile(), Profile())
-    vid_path, vid_writer = [None] * bs, [None] * bs
-    
-    
+    vid_path, vid_writer = [None] * bs, [None] * bs    
     
     with dt[0]:
         im = torch.from_numpy(im).to(model.device)
@@ -173,7 +159,7 @@ def thread_target(i, weights,
         im0 = annotator.result()
         if view_img:
             if platform.system() == 'Linux' and p not in windows:
-                add_window(p, lock)
+                windows[i] = p 
                 cv2.namedWindow(str(p), cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)  # allow window resize (Linux)
                 cv2.resizeWindow(str(p), im0.shape[1], im0.shape[0])
             cv2.imshow(str(p), im0)
@@ -268,14 +254,15 @@ def run(
     # windows
     
     dt = (Profile(), Profile(), Profile())
-    lock = Lock()
+    windows = [None] * len(dataset) 
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=25)
     
     # Run inference
     for i, dataset_iter in enumerate(dataset):
         a = executor.submit(thread_target, i, weights, device, dnn, data, half, bs, imgsz, dataset, dataset_iter, save_dir,
                     augment, conf_thres, iou_thres, classes, agnostic_nms,
                     max_det, webcam, line_thickness, save_crop, save_txt, view_img, save_img, 
-                    save_conf, hide_labels, hide_conf, visualize, lock)  
+                    save_conf, hide_labels, hide_conf, visualize, windows)  
         LOGGER.info(a.result()) 
     
     executor.shutdown(wait=True)
