@@ -86,7 +86,6 @@ def thread_target(i, weights,
     
     # Set of variables to copy
     # model
-    
     path, im, im0s, vid_cap, s = dataset_iter
     model = DetectMultiBackend(weights, device=device, dnn=dnn, data=data, fp16=half)
     names, pt = model.names, model.pt
@@ -250,9 +249,9 @@ def run(
     # seen
     # windows
     
-    dt = (Profile(), Profile(), Profile())
+    
     windows = [None] * len(dataset) 
-    executor = concurrent.futures.ThreadPoolExecutor(max_workers=25)
+    executor = concurrent.futures.ThreadPoolExecutor()
     
     # Run inference
     for i, dataset_iter in enumerate(dataset):
