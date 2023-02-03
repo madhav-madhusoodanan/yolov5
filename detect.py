@@ -251,7 +251,7 @@ def run(
     
     
     windows = [None] * len(dataset) 
-    executor = concurrent.futures.ThreadPoolExecutor()
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count())
     
     # Run inference
     for i, dataset_iter in enumerate(dataset):
