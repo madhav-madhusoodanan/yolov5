@@ -51,7 +51,7 @@ from utils.general import (LOGGER, Profile, check_file, check_img_size, check_im
 from utils.plots import Annotator, colors, save_one_box
 from utils.torch_utils import select_device, smart_inference_mode
 
-    
+@smart_inference_mode()
 def thread_target(i, weights,
                   device,
                   dnn,
@@ -183,7 +183,7 @@ def thread_target(i, weights,
     # Print time (inference-only)
     LOGGER.info(f"{s}{'' if len(det) else '(no detections), '}{dt[1].dt * 1E3:.1f}ms")
 
-@smart_inference_mode()
+
 def run(
         weights=ROOT / 'yolov5s.pt',  # model path or triton URL
         source=ROOT / 'data/images',  # file/dir/URL/glob/screen/0(webcam)
