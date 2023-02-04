@@ -60,6 +60,7 @@ def thread_target(i, weights,
                   half,
                   bs,
                   imgsz,
+                  dataset_part,
                   dataset,
                   save_dir,
                   augment,
@@ -93,7 +94,7 @@ def thread_target(i, weights,
     dt = (Profile(), Profile(), Profile())
     vid_path, vid_writer = [None] * bs, [None] * bs    
     
-    for path, im, im0s, vid_cap, s in dataset:
+    for path, im, im0s, vid_cap, s in dataset_part:
         with dt[0]:
             im = torch.from_numpy(im).to(model.device)
             im = im.half() if model.fp16 else im.float()  # uint8 to fp16/32
@@ -264,7 +265,7 @@ def run(
     
     # Run inference
     for i, dataset_part in enumerate(new_dataset):
-        a = executor.submit(thread_target, i, weights, device, dnn, data, half, bs, imgsz, dataset_part, save_dir,
+        a = executor.submit(thread_target, i, weights, device, dnn, data, half, bs, imgsz, dataset_part, dataset, save_dir,
                     augment, conf_thres, iou_thres, classes, agnostic_nms,
                     max_det, webcam, line_thickness, save_crop, save_txt, view_img, save_img, 
                     save_conf, hide_labels, hide_conf, visualize, windows)
