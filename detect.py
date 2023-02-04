@@ -87,13 +87,13 @@ def thread_target(i, weights,
     # Set of variables to copy
     # model
     
+    model = DetectMultiBackend(weights, device=device, dnn=dnn, data=data, fp16=half)
+    names, pt = model.names, model.pt
+    model.warmup(imgsz=(1 if pt or model.triton else bs, 3, *imgsz))  # warmup
+    dt = (Profile(), Profile(), Profile())
+    vid_path, vid_writer = [None] * bs, [None] * bs    
+    
     for path, im, im0s, vid_cap, s in dataset:
-        model = DetectMultiBackend(weights, device=device, dnn=dnn, data=data, fp16=half)
-        names, pt = model.names, model.pt
-        model.warmup(imgsz=(1 if pt or model.triton else bs, 3, *imgsz))  # warmup
-        dt = (Profile(), Profile(), Profile())
-        vid_path, vid_writer = [None] * bs, [None] * bs    
-        
         with dt[0]:
             im = torch.from_numpy(im).to(model.device)
             im = im.half() if model.fp16 else im.float()  # uint8 to fp16/32
