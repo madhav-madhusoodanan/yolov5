@@ -264,10 +264,11 @@ def run(
     
     # Run inference
     for i, dataset_part in enumerate(new_dataset):
-        executor.submit(thread_target, i, weights, device, dnn, data, half, bs, imgsz, dataset_part, save_dir,
+        a = executor.submit(thread_target, i, weights, device, dnn, data, half, bs, imgsz, dataset_part, save_dir,
                     augment, conf_thres, iou_thres, classes, agnostic_nms,
                     max_det, webcam, line_thickness, save_crop, save_txt, view_img, save_img, 
-                    save_conf, hide_labels, hide_conf, visualize, windows)   
+                    save_conf, hide_labels, hide_conf, visualize, windows)
+        LOGGER.info(a.result())  
     
     executor.shutdown(wait=True)
     
