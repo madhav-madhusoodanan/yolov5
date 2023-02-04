@@ -258,10 +258,11 @@ def run(
     # and then make root(n) threads that deal with root(n) frames each
     n = len(dataset)
     size = int(sqrt(n))
+    dataset = enumerate(dataset)
     new_dataset = [dataset[x:x+size] for x in range(0, len(dataset), size)]
     
     # Run inference
-    for i, dataset_part in enumerate(new_dataset):
+    for i, dataset_part in new_dataset:
         executor.submit(thread_target, i, weights, device, dnn, data, half, bs, imgsz, dataset_part, save_dir,
                     augment, conf_thres, iou_thres, classes, agnostic_nms,
                     max_det, webcam, line_thickness, save_crop, save_txt, view_img, save_img, 
