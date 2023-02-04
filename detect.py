@@ -257,9 +257,9 @@ def run(
     # split this array into root(n) elements
     # and then make root(n) threads that deal with root(n) frames each
     n = len(dataset)
-    dataset = enumerate(dataset)
     size = int(sqrt(n))
-    new_dataset = [dataset[x:x+size] for x in range(0, len(dataset), size)]
+    dataset = enumerate(dataset)
+    new_dataset = [dataset[x:x+size] for x in range(0, n, size)]
     
     # Run inference
     for i, dataset_part in new_dataset:
