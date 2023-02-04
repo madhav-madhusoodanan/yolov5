@@ -266,6 +266,8 @@ def run(
     _new_dataset = [im for _, im in enumerate(dataset)]
     new_dataset = [_new_dataset[x:x+size] for x in range(0, n, size)]
     
+    LOGGER.info(f'{n} {size} {len(new_dataset)}')
+    
     # Run inference
     for i, dataset_part in enumerate(new_dataset):
         a = executor.submit(thread_target, i, weights, device, dnn, data, half, bs, imgsz, dataset_part, dataset, save_dir,
