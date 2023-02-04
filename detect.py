@@ -261,10 +261,10 @@ def run(
     # split this array into root(n) elements
     # and then make root(n) threads that deal with root(n) frames each
     
-    n = len(dataset)
+    new_dataset = [im for _, im in enumerate(dataset)]
+    n = len(new_dataset)
     size = int(sqrt(n))
-    _new_dataset = [im for _, im in enumerate(dataset)]
-    new_dataset = [_new_dataset[x:x+size] for x in range(0, n, size)]
+    new_dataset = [new_dataset[x:x+size] for x in range(0, len(new_dataset), size)]
     
     LOGGER.info(f'{n} {size} {len(new_dataset)}')
     
